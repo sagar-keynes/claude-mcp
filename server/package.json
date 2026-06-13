@@ -1,0 +1,36 @@
+{
+  "name": "test-athena",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon ./server.js",
+    "server": "nodemon ./server.js",
+    "client": "cd client && pnpm dev",
+    "format:check": "prettier --check './*.js'",
+    "format": "prettier --write './*.js'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.81",
+    "@ai-sdk/mcp": "^1.0.46",
+    "@anthropic-ai/sdk": "^0.24.3",
+    "@aws-sdk/client-athena": "^3.1045.0",
+    "@aws-sdk/client-glue": "^3.1045.0",
+    "@aws-sdk/client-lambda": "^3.1066.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ai": "^6.0.197",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "nodemon": "^3.1.14",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
+  }
+}

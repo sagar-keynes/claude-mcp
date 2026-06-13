@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional custom reset for the chat app */
+textarea:focus {
+  outline: none;
+}
