@@ -29,7 +29,38 @@ const lambdaClient = new LambdaClient({
 
 const SYSTEM_PROMPT = `You are Athena, an AI assistant that answers questions about Kortex analytics data stored in Athena.
 be concise and to the point.
-Use tool results to answer the user's question with clear, data-backed insights.`
+Use tool results to answer the user's question with clear, data-backed insights.
+When the user asks for a chart, graph, or visualization, use the chartDisplayTool to render it inline after fetching the data.`
+
+const chartDisplayTool = tool({
+  description:
+    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data.',
+  inputSchema: z.object({
+    title: z.string().describe('Chart heading'),
+    style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
+    series: z
+      .array(
+        z.object({
+          name: z.string().describe('Series label shown in legend'),
+          values: z.array(z.number()).describe('Array of numeric data points'),
+        }),
+      )
+      .describe('One or more data series to plot'),
+    xAxis: z
+      .object({
+        data: z.array(z.string()).describe('Labels for each point on the x-axis'),
+        title: z.string().optional().describe('X-axis label'),
+      })
+      .optional(),
+    yAxis: z
+      .object({
+        title: z.string().optional().describe('Y-axis label'),
+        min: z.number().optional(),
+        max: z.number().optional(),
+      })
+      .optional(),
+  }),
+})
 
 function toActionGroupParameters(params) {
   return Object.entries(params).map(([name, value]) => ({
@@ -267,8 +298,7 @@ app.post('/api/query/stream', async (req, res) => {
       : {}
 
     const lambdaTools = createLambdaTools()
-    console.log('lambdaTools', lambdaTools)
-    const tools = { ...lambdaTools }
+    const tools = { ...mcpTools, chartDisplayTool }
 
     if (!Object.keys(tools).length) {
       return res.status(500).json({ error: 'No tools available from MCP or Lambda' })
