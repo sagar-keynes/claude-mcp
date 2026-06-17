@@ -108,7 +108,12 @@ export default function App() {
     error,
   } = useChat({
     transport: new DefaultChatTransport({
-      api: '/api/query/stream',
+      api: import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/query/stream`
+        : '/api/query/stream',
+      headers: {
+        "content-type": "application/json"
+      }
     }),
     experimental_throttle: 50,
   })
@@ -155,9 +160,8 @@ export default function App() {
       return 'Athena is typing…'
 
     if (status === 'error') {
-      return `Error: ${
-        error?.message ?? 'unknown'
-      }`
+      return `Error: ${error?.message ?? 'unknown'
+        }`
     }
 
     return 'Ready'
@@ -185,13 +189,12 @@ export default function App() {
 
             <span
               className={`flex items-center gap-1.5 text-[11px]
-              ${
-                isLoading
+              ${isLoading
                   ? 'text-violet-600'
                   : status === 'error'
-                  ? 'text-red-500'
-                  : 'text-gray-700'
-              }`}
+                    ? 'text-red-500'
+                    : 'text-gray-700'
+                }`}
             >
               {isLoading && <Spinner />}
               {statusLabel}
@@ -206,28 +209,25 @@ export default function App() {
               return (
                 <div
                   key={message.id}
-                  className={`flex ${
-                    isUser
-                      ? 'justify-end'
-                      : 'justify-start'
-                  }`}
+                  className={`flex ${isUser
+                    ? 'justify-end'
+                    : 'justify-start'
+                    }`}
                 >
                   <div
                     className={`
                       px-4 py-3
-                      ${
-                        isUser
-                          ? 'max-w-[82%] rounded-[18px_18px_4px_18px] bg-gradient-to-br from-violet-700 to-violet-600 shadow-[0_4px_20px_rgba(124,58,237,0.25)]'
-                          : 'w-full max-w-full rounded-[18px_18px_18px_4px] border border-[#252839] bg-[#1a1d27] shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
+                      ${isUser
+                        ? 'max-w-[82%] rounded-[18px_18px_4px_18px] bg-gradient-to-br from-violet-700 to-violet-600 shadow-[0_4px_20px_rgba(124,58,237,0.25)]'
+                        : 'w-full max-w-full rounded-[18px_18px_18px_4px] border border-[#252839] bg-[#1a1d27] shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
                       }
                     `}
                   >
                     <div
-                      className={`mb-1.5 text-[10px] uppercase tracking-[0.2em] opacity-60 ${
-                        isUser
-                          ? 'text-violet-200'
-                          : 'text-gray-500'
-                      }`}
+                      className={`mb-1.5 text-[10px] uppercase tracking-[0.2em] opacity-60 ${isUser
+                        ? 'text-violet-200'
+                        : 'text-gray-500'
+                        }`}
                     >
                       {isUser
                         ? 'You'
@@ -235,11 +235,10 @@ export default function App() {
                     </div>
 
                     <div
-                      className={`break-words text-[13px] leading-7 ${
-                        isUser
-                          ? 'text-violet-100'
-                          : 'text-gray-300'
-                      }`}
+                      className={`break-words text-[13px] leading-7 ${isUser
+                        ? 'text-violet-100'
+                        : 'text-gray-300'
+                        }`}
                     >
                       <MessageParts
                         message={message}

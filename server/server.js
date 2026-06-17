@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { createMCPClient } from '@ai-sdk/mcp'
-import { streamText, tool, stepCountIs } from 'ai'
+import { stepCountIs, streamText, tool } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
 

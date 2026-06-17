@@ -5,11 +5,8 @@ server/node_modules/
 
 # Environment files
 .env
-.env.*
 client/.env
-client/.env.*
 server/.env
-server/.env.*
 
 # Build outputs
 dist/
