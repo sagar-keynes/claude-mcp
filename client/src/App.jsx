@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import ChartDisplay from './components/ChartDisplay'
+import DataToolBadge from './components/DataToolBadge'
 
 function Spinner() {
   return (
@@ -16,60 +18,16 @@ function ToolCard({ part }) {
     part.type?.replace(/^tool-/, '') ||
     'Tool'
 
-  const statusMap = {
-    'input-streaming': 'Preparing...',
-    'input-available': 'Running...',
-    'output-streaming': 'Receiving result...',
-    'output-available': 'Complete',
-    'output-error': 'Failed',
-    'approval-requested': 'Awaiting approval',
-    'approval-responded': 'Approved',
-    'output-denied': 'Denied',
+  if (toolName === 'chartDisplayTool') {
+    return (
+      <ChartDisplay
+        input={part.input}
+        state={part.state}
+      />
+    )
   }
 
-  return (
-    <div className="my-3 rounded-xl border border-[#252839] bg-[#11141c] p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-violet-400">
-          {toolName}
-        </span>
-
-        <span className="text-[11px] text-gray-500">
-          {statusMap[part.state] ?? part.state}
-        </span>
-      </div>
-
-      {part.input && (
-        <details className="mb-2">
-          <summary className="cursor-pointer text-xs text-gray-500">
-            Input
-          </summary>
-
-          <pre className="mt-2 overflow-auto rounded bg-[#0d0f14] p-2 text-[11px] text-slate-300">
-            {JSON.stringify(part.input, null, 2)}
-          </pre>
-        </details>
-      )}
-
-      {part.output && (
-        <details open>
-          <summary className="cursor-pointer text-xs text-gray-500">
-            Output
-          </summary>
-
-          <pre className="mt-2 overflow-auto rounded bg-[#0d0f14] p-2 text-[11px] text-slate-300">
-            {JSON.stringify(part.output, null, 2)}
-          </pre>
-        </details>
-      )}
-
-      {part.error && (
-        <div className="mt-2 text-xs text-red-400">
-          {String(part.error)}
-        </div>
-      )}
-    </div>
-  )
+  return <DataToolBadge part={part} />
 }
 
 function MessageParts({ message }) {
@@ -256,11 +214,11 @@ export default function App() {
                 >
                   <div
                     className={`
-                      max-w-[82%] px-4 py-3
+                      px-4 py-3
                       ${
                         isUser
-                          ? 'rounded-[18px_18px_4px_18px] bg-gradient-to-br from-violet-700 to-violet-600 shadow-[0_4px_20px_rgba(124,58,237,0.25)]'
-                          : 'rounded-[18px_18px_18px_4px] border border-[#252839] bg-[#1a1d27] shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
+                          ? 'max-w-[82%] rounded-[18px_18px_4px_18px] bg-gradient-to-br from-violet-700 to-violet-600 shadow-[0_4px_20px_rgba(124,58,237,0.25)]'
+                          : 'w-full max-w-full rounded-[18px_18px_18px_4px] border border-[#252839] bg-[#1a1d27] shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
                       }
                     `}
                   >
