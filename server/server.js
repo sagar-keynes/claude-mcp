@@ -9,8 +9,11 @@ import { z } from 'zod'
 dotenv.config()
 
 const app = express()
-const PORT = process.env.PORT || 3000
+
+// config
+const PORT = Number(process.env.PORT || 3000)
 const HOSTED_MCP_URL = process.env.HOSTED_MCP_URL || ''
+const STEP_COUNTS = Number(process.env.STEP_COUNTS || 10)
 
 const SYSTEM_PROMPT = `
 # System Prompt — Keynes AI Analytics Chatbot
@@ -277,7 +280,7 @@ app.post('/api/query/stream', async (req, res) => {
       system: SYSTEM_PROMPT,
       messages: promptMessages,
       tools,
-      stopWhen: stepCountIs(10),
+      stopWhen: stepCountIs(STEP_COUNTS),
       onStepFinish: async (step) => {
         if (step.toolCalls?.length) {
           const toolCall = step.toolCalls[0]

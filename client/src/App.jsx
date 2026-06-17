@@ -111,9 +111,6 @@ export default function App() {
       api: import.meta.env.VITE_API_BASE_URL
         ? `${import.meta.env.VITE_API_BASE_URL}/api/query/stream`
         : '/api/query/stream',
-      headers: {
-        "content-type": "application/json"
-      }
     }),
     experimental_throttle: 50,
   })
