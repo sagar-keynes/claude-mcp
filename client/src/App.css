@@ -2,40 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100;
+}
+
 textarea:focus {
   outline: none;
 }
 
-.chart-card {
-  overflow: hidden;
-  border-radius: 0.875rem;
-  border: 1px solid #252839;
-  background: linear-gradient(180deg, #141824 0%, #11141c 100%);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(51 65 85) transparent;
 }
 
-.chart-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid #1e2130;
-  padding: 1rem 1.125rem 0.875rem;
+.chat-scroll::-webkit-scrollbar {
+  width: 8px;
 }
 
-.chart-canvas {
-  background:
-    radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent 45%),
-    #0d0f14;
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+  border-radius: 999px;
 }
 
-.data-fetch-tool {
-  border-radius: 0.5rem;
-  border: 1px solid transparent;
-  background: rgba(13, 15, 20, 0.45);
-  padding: 0.375rem 0.625rem;
+.markdown-content {
+  @apply text-slate-100;
 }
 
-.data-fetch-tool:hover {
-  border-color: #1e2130;
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
 }
