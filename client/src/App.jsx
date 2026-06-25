@@ -6,6 +6,30 @@ import { DefaultChatTransport } from 'ai'
 import ChartDisplay from './components/ChartDisplay'
 import DataToolBadge from './components/DataToolBadge'
 
+const scrollbarStyles = `
+  textarea.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  textarea.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  textarea.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.4);
+    border-radius: 3px;
+  }
+
+  textarea.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.6);
+  }
+
+  textarea.custom-scrollbar {
+    scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+    scrollbar-width: thin;
+  }
+`
+
 function Spinner() {
   return (
     <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -99,6 +123,9 @@ function MessageParts({ message }) {
 export default function App() {
   const [input, setInput] = useState('')
   const bottomRef = useRef(null)
+  const messagesContainerRef = useRef(null)
+  const [showScrollButton, setShowScrollButton] = useState(false)
+  const textareaRef = useRef(null)
 
   const {
     messages,
@@ -123,7 +150,28 @@ export default function App() {
     bottomRef.current?.scrollIntoView({
       behavior: 'smooth',
     })
+    setShowScrollButton(false)
   }, [messages])
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+    setShowScrollButton(!isNearBottom)
+  }
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value)
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`
+    }
+  }
 
   const onSubmit = (e) => {
     e?.preventDefault()
@@ -137,6 +185,10 @@ export default function App() {
     })
 
     setInput('')
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
   }
 
   const onKeyDown = (e) => {
@@ -165,85 +217,61 @@ export default function App() {
   })()
 
   return (
-    <div className="min-h-screen bg-[#0d0f14] px-4 py-10 text-slate-200">
-      <div className="mx-auto flex w-full max-w-[780px] flex-col gap-6">
+    <div className="flex h-screen flex-col bg-[#0d0f14] text-slate-200">
+      <style>{scrollbarStyles}</style>
+      {/* Header */}
+      <div className="border-b border-[#1e2130] px-6 py-4">
+        <h1 className="text-lg font-semibold">Athena</h1>
+      </div>
 
-        {/* Header */}
+      {/* Messages Container */}
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto"
+      >
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-6 py-6 pb-40">
+          {messages.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
+              <div className="text-4xl font-semibold text-slate-300">Athena</div>
+              <p className="max-w-md text-sm text-slate-400">
+                Ask questions about your Kortex analytics data
+              </p>
+            </div>
+          )}
 
-        <div>
-          <div className="mb-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.25em] text-violet-500">
-            Athena Chat
-          </div>
-        </div>
+          {messages.map((message) => {
+            const isUser = message.role === 'user'
 
-        {/* Conversation */}
-
-        <div className="overflow-hidden rounded-2xl border border-[#1e2130] bg-[#13151c]">
-          <div className="flex items-center justify-between border-b border-[#1e2130] px-5 py-3.5">
-            <span className="text-xs uppercase tracking-[0.1em] text-gray-600">
-              Conversation
-            </span>
-
-            <span
-              className={`flex items-center gap-1.5 text-[11px]
-              ${isLoading
-                  ? 'text-violet-600'
-                  : status === 'error'
-                    ? 'text-red-500'
-                    : 'text-gray-700'
-                }`}
-            >
-              {isLoading && <Spinner />}
-              {statusLabel}
-            </span>
-          </div>
-
-          <div className="chat-scroll flex max-h-[52vh] flex-col gap-4 overflow-y-auto p-5">
-            {messages.map((message) => {
-              const isUser =
-                message.role === 'user'
-
-              return (
+            return (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex ${isUser
-                    ? 'justify-end'
-                    : 'justify-start'
+                  className={`flex max-w-2xl gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'
                     }`}
                 >
+                  {!isUser && (
+                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1e2130]">
+                      <span className="text-xs font-semibold">A</span>
+                    </div>
+                  )}
+
                   <div
-                    className={`
-                      px-4 py-3
-                      ${isUser
-                        ? 'max-w-[82%] rounded-[18px_18px_4px_18px] bg-gradient-to-br from-violet-700 to-violet-600 shadow-[0_4px_20px_rgba(124,58,237,0.25)]'
-                        : 'w-full max-w-full rounded-[18px_18px_18px_4px] border border-[#252839] bg-[#1a1d27] shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
-                      }
-                    `}
+                    className={`rounded-2xl px-4 py-3 ${isUser
+                      ? 'bg-[#1a1d27]'
+                      : 'bg-[#13151c]'
+                      }`}
                   >
                     <div
-                      className={`mb-1.5 text-[10px] uppercase tracking-[0.2em] opacity-60 ${isUser
-                        ? 'text-violet-200'
-                        : 'text-gray-500'
+                      className={`text-sm leading-7 ${isUser ? 'text-slate-200' : 'text-slate-300'
                         }`}
                     >
-                      {isUser
-                        ? 'You'
-                        : 'Athena'}
-                    </div>
-
-                    <div
-                      className={`break-words text-[13px] leading-7 ${isUser
-                        ? 'text-violet-100'
-                        : 'text-gray-300'
-                        }`}
-                    >
-                      <MessageParts
-                        message={message}
-                      />
+                      <MessageParts message={message} />
 
                       {!isUser &&
-                        !message.parts
-                          ?.length &&
+                        !message.parts?.length &&
                         isLoading && (
                           <span className="opacity-50">
                             <Spinner />
@@ -252,82 +280,125 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            )
+          })}
 
-            <div ref={bottomRef} />
-          </div>
+          <div ref={bottomRef} />
         </div>
+      </div>
 
-        {/* Input */}
-
-        <div className="flex flex-col gap-3.5 rounded-2xl border border-[#1e2130] bg-[#13151c] p-5">
-          <label className="text-[11px] uppercase tracking-[0.12em] text-gray-600">
-            Send a new question
-          </label>
-
-          <textarea
-            value={input}
-            onChange={(e) =>
-              setInput(e.target.value)
-            }
-            onKeyDown={onKeyDown}
-            rows={3}
-            disabled={isLoading}
-            placeholder="Ask Athena about your data, query results, or schema…"
-            className="
-              min-h-[90px]
-              resize-y
-              rounded-xl
-              border border-[#252839]
-              bg-[#0d0f14]
-              px-4 py-3
-              text-[13px]
-              leading-6
-              text-slate-200
-              outline-none
-              transition-colors
-              focus:border-violet-600
-            "
-          />
-
-          <div className="flex justify-end gap-2">
-            {isLoading && (
-              <button
-                onClick={stop}
-                className="
-                  rounded-full border border-gray-700
-                  px-5 py-2 text-sm text-gray-400
-                  transition-all
-                  hover:border-red-500
-                  hover:text-red-300
-                "
-              >
-                Stop
-              </button>
-            )}
-
-            <button
-              onClick={onSubmit}
-              disabled={
-                !input.trim() ||
-                isLoading
-              }
-              className="
-                rounded-full px-6 py-2 text-sm font-medium
-                transition-all
-                disabled:cursor-not-allowed
-                disabled:bg-[#1e2130]
-                disabled:text-gray-700
-                enabled:bg-gradient-to-br
-                enabled:from-violet-700
-                enabled:to-violet-600
-                enabled:text-violet-100
-                enabled:shadow-[0_4px_14px_rgba(124,58,237,0.35)]
-              "
+      {/* Scroll to Bottom Button */}
+      {showScrollButton && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <button
+            onClick={scrollToBottom}
+            className="flex items-center justify-center h-9 w-9 rounded-full border border-[#252839] bg-[#13151c] text-slate-400 hover:border-slate-600 transition-colors"
+            title="Scroll to latest"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
             >
-              Send message
-            </button>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Floating Input Area */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0d0f14] via-[#0d0f14] to-transparent px-6 py-6">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="rounded-2xl border border-[#252839] bg-[#13151c] p-4 shadow-xl">
+            <div className="flex flex-col gap-3">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={onKeyDown}
+                rows={1}
+                disabled={isLoading}
+                placeholder="Ask Athena about your data, query results, or schema…"
+                className="
+                  w-full resize-none overflow-y-auto custom-scrollbar
+                  bg-transparent
+                  text-sm text-slate-200
+                  placeholder-slate-500
+                  outline-none
+                  disabled:opacity-50
+                  pt-1.5 pb-1 px-0
+                "
+              />
+
+              <div className="flex items-center justify-end">
+                {isLoading ? (
+                  <button
+                    onClick={stop}
+                    className="
+                      flex h-8 w-8 items-center justify-center
+                      rounded
+                      transition-colors
+                      border border-red-500
+                      bg-gradient-to-br from-red-700 to-red-600
+                      text-red-400
+                      hover:border-red-400
+                      hover:text-red-300
+                      hover:shadow-[0_0_12px_rgba(220,38,38,0.3)]
+                    "
+                    title="Stop generating"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <rect x="6" y="6" width="12" height="12" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={onSubmit}
+                    disabled={!input.trim()}
+                    className="
+                      flex h-8 w-8 items-center justify-center
+                      rounded text-slate-400
+                      transition-colors
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                      disabled:border disabled:border-[#252839]
+                      enabled:border enabled:border-violet-500
+                      enabled:bg-gradient-to-br
+                    enabled:from-violet-700
+                    enabled:to-violet-600
+                    enabled:text-violet-400
+                    enabled:hover:border-violet-400
+                    enabled:hover:text-violet-300
+                      enabled:hover:shadow-[0_0_12px_rgba(124,58,237,0.3)]
+                    "
+                    title="Send message (Enter)"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
