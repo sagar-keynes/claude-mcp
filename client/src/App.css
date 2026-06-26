@@ -9,7 +9,7 @@ body,
 }
 
 body {
-  @apply bg-white text-gray-900 dark:bg-stone-900 dark:text-stone-100;
+  @apply bg-stone-50 text-gray-900 dark:bg-stone-900 dark:text-stone-100;
 }
 
 textarea:focus {

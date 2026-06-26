@@ -94,7 +94,7 @@ export default function ChatInput({
   return (
     <>
       <style>{scrollbarStyles}</style>
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-stone-900 dark:via-stone-900 dark:to-transparent px-4 py-4 md:px-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-stone-50 via-stone-50 to-transparent dark:from-stone-900 dark:via-stone-900 dark:to-transparent px-4 py-4 md:px-6">
         <div className="mx-auto max-w-3xl">
           <div className={`flex flex-col gap-1 ${surfaceClass} p-4`}>
             <textarea

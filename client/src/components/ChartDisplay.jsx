@@ -14,16 +14,19 @@ import {
 import { surfaceClass } from '../lib/ui'
 
 const SERIES_COLORS = [
-  '#c96442',
-  '#6b8caf',
-  '#788c5d',
   '#b8956a',
-  '#9580a5',
-  '#7ea3a8',
+  '#d97706',
+  '#8b7355',
+  '#a16207',
+  '#92400e',
+  '#78350f',
 ]
 
-const GRID_COLOR = '#1e293b'
-const AXIS_COLOR = '#64748b'
+// Detect dark mode preference
+const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+
+const GRID_COLOR = prefersDark ? '#3a3a38' : '#faf8f7'
+const AXIS_COLOR = prefersDark ? '#a8a29e' : '#a8a29e'
 
 function formatNumber(value) {
   if (value == null || Number.isNaN(value)) return '—'
@@ -77,24 +80,48 @@ function getSeriesSummary(series) {
   }
 }
 
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label, allData }) {
   if (!active || !payload?.length) return null
 
+  const calculatePercentChange = (currentValue, allValues) => {
+    if (!allValues || allValues.length < 2) return null
+    const sorted = [...allValues].sort((a, b) => a - b)
+    const min = sorted[0]
+    const max = sorted[sorted.length - 1]
+    const range = max - min
+    if (range === 0) return null
+    return (((currentValue - min) / range) * 100).toFixed(0)
+  }
+
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 shadow-lg dark:border-slate-800 dark:bg-slate-900/95">
-      <p className="mb-1.5 text-[11px] font-medium text-slate-500">{label}</p>
-      {payload.map((entry) => (
-        <div key={entry.name} className="flex items-center gap-2 text-xs text-slate-200">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: entry.color }}
-          />
-          <span className="text-slate-400">{entry.name}</span>
-          <span className="font-medium tabular-nums text-slate-100">
-            {formatNumber(entry.value)}
-          </span>
-        </div>
-      ))}
+    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5 shadow-lg dark:border-stone-700 dark:bg-stone-800/95">
+      <p className="mb-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">{label}</p>
+      {payload.map((entry) => {
+        const allValues = entry.payload ? Object.values(entry.payload).filter(v => typeof v === 'number') : []
+        const percentile = calculatePercentChange(entry.value, allValues)
+
+        return (
+          <div key={entry.name} className="mb-1.5 last:mb-0">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-[11px] font-medium text-stone-700 dark:text-stone-200">{entry.name}</span>
+            </div>
+            <div className="ml-5 flex items-baseline gap-1.5 text-xs">
+              <span className="font-semibold tabular-nums text-stone-900 dark:text-stone-100">
+                {formatNumber(entry.value)}
+              </span>
+              {percentile !== null && (
+                <span className="text-[10px] text-stone-500 dark:text-stone-400">
+                  ({percentile}th percentile)
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -102,15 +129,15 @@ function ChartTooltip({ active, payload, label }) {
 function ChartSkeleton() {
   return (
     <div className={`my-3 overflow-hidden ${surfaceClass}`}>
-      <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800">
-        <div className="h-4 w-56 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-        <div className="mt-2 h-3 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+      <div className="border-b border-gray-200 px-4 py-4 dark:border-stone-700">
+        <div className="h-4 w-56 animate-pulse rounded bg-gray-200 dark:bg-stone-700" />
+        <div className="mt-2 h-3 w-32 animate-pulse rounded bg-gray-200/80 dark:bg-stone-700/80" />
       </div>
       <div className="flex h-[280px] items-end gap-2 px-6 pb-8 pt-6">
         {[38, 62, 44, 78, 52, 68, 48, 72, 58].map((h, i) => (
           <div
             key={i}
-            className="flex-1 animate-pulse rounded-t bg-slate-200/80 dark:bg-slate-800/80"
+            className="flex-1 animate-pulse rounded-t bg-gray-200/80 dark:bg-stone-700/80"
             style={{ height: `${h}%` }}
           />
         ))}
@@ -127,7 +154,7 @@ function SeriesLegend({ seriesNames }) {
       {seriesNames.map((name, index) => (
         <span
           key={name}
-          className="inline-flex items-center gap-1.5 rounded-full border border-slate-100 px-2.5 py-1 text-[11px] text-slate-400 dark:border-slate-800"
+          className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-1 text-[11px] text-gray-600 dark:border-stone-700 dark:text-stone-400"
         >
           <span
             className="h-2 w-2 rounded-full"
@@ -138,6 +165,58 @@ function SeriesLegend({ seriesNames }) {
       ))}
     </div>
   )
+}
+
+function MetricCard({ label, value, context }) {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-stone-100 px-4 py-3 dark:border-stone-700 dark:bg-stone-800/60">
+      <p className="text-xs font-medium text-gray-600 dark:text-stone-400">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-gray-950 dark:text-stone-50">
+        {value}
+      </p>
+      {context && (
+        <p className="mt-1 text-xs text-gray-500 dark:text-stone-400">{context}</p>
+      )}
+    </div>
+  )
+}
+
+function calculateMetrics(series, xAxisData) {
+  if (!series?.length) return null
+
+  const primarySeries = series[0]
+  const values = (primarySeries.values ?? []).filter(v => typeof v === 'number')
+  if (!values.length) return null
+
+  const total = values.reduce((a, b) => a + b, 0)
+  const avg = total / values.length
+
+  let maxVal = values[0]
+  let maxIdx = 0
+  let minVal = values[0]
+  let minIdx = 0
+
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] > maxVal) {
+      maxVal = values[i]
+      maxIdx = i
+    }
+    if (values[i] < minVal) {
+      minVal = values[i]
+      minIdx = i
+    }
+  }
+
+  const maxLabel = xAxisData?.[maxIdx] || `Day ${maxIdx + 1}`
+  const minLabel = xAxisData?.[minIdx] || `Day ${minIdx + 1}`
+
+  const first = values[0]
+  const last = values[values.length - 1]
+  const percentChange = ((last - first) / first) * 100
+
+  return { total, avg, min: minVal, minLabel, max: maxVal, maxLabel, percentChange }
 }
 
 function LineChartView({ data, seriesNames, yAxisTitle }) {
@@ -161,16 +240,16 @@ function LineChartView({ data, seriesNames, yAxisTitle }) {
         label={
           yAxisTitle
             ? {
-                value: yAxisTitle,
-                angle: -90,
-                position: 'insideLeft',
-                fill: AXIS_COLOR,
-                fontSize: 11,
-              }
+              value: yAxisTitle,
+              angle: -90,
+              position: 'insideLeft',
+              fill: AXIS_COLOR,
+              fontSize: 11,
+            }
             : undefined
         }
       />
-      <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#334155', strokeDasharray: '4 4' }} />
+      <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#c7d2d9', strokeDasharray: '4 4' }} />
       {seriesNames.map((name, i) => (
         <Line
           key={name}
@@ -179,7 +258,7 @@ function LineChartView({ data, seriesNames, yAxisTitle }) {
           stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
           strokeWidth={2}
           dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
+          activeDot={{ r: 5, strokeWidth: 2, fill: SERIES_COLORS[i % SERIES_COLORS.length] }}
         />
       ))}
     </LineChart>
@@ -207,16 +286,16 @@ function BarChartView({ data, seriesNames, yAxisTitle }) {
         label={
           yAxisTitle
             ? {
-                value: yAxisTitle,
-                angle: -90,
-                position: 'insideLeft',
-                fill: AXIS_COLOR,
-                fontSize: 11,
-              }
+              value: yAxisTitle,
+              angle: -90,
+              position: 'insideLeft',
+              fill: AXIS_COLOR,
+              fontSize: 11,
+            }
             : undefined
         }
       />
-      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
+      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(180, 140, 110, 0.08)' }} />
       {seriesNames.map((name, i) => (
         <Bar
           key={name}
@@ -264,12 +343,12 @@ function ScatterChartView({ data, seriesNames, yAxisTitle }) {
         label={
           yAxisTitle
             ? {
-                value: yAxisTitle,
-                angle: -90,
-                position: 'insideLeft',
-                fill: AXIS_COLOR,
-                fontSize: 11,
-              }
+              value: yAxisTitle,
+              angle: -90,
+              position: 'insideLeft',
+              fill: AXIS_COLOR,
+              fontSize: 11,
+            }
             : undefined
         }
       />
@@ -308,44 +387,51 @@ export default function ChartDisplay({ input, state }) {
   const data = buildChartData(input)
   const seriesNames = input.series.map((s) => s.name)
   const yAxisTitle = input.yAxis?.title
+  const xAxisData = input.xAxis?.data
   const summary = getSeriesSummary(input.series)
+  const metrics = calculateMetrics(input.series, xAxisData)
 
   return (
     <div className={`my-3 overflow-hidden ${surfaceClass}`}>
-      <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="border-b border-stone-200 px-4 py-4 dark:border-stone-700">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
-              Visualization
-            </p>
-            <h3 className="mt-1 text-sm font-medium leading-6 text-slate-800 dark:text-slate-100">
+            <h3 className="text-sm font-medium leading-6 text-gray-950 dark:text-stone-100">
               {input.title}
             </h3>
-            {summary && (
-              <p className="mt-1 text-xs text-slate-500">
-                Latest {summary.name}:{' '}
-                <span className="font-medium tabular-nums text-slate-300">
-                  {formatNumber(summary.latest)}
-                </span>
-                {' · '}
-                Peak:{' '}
-                <span className="font-medium tabular-nums text-slate-300">
-                  {formatNumber(summary.peak)}
-                </span>
-              </p>
-            )}
           </div>
 
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-            <span className="rounded-full border border-slate-100 px-2.5 py-1 text-[10px] uppercase tracking-wide text-slate-500 dark:border-slate-800">
+            <span className="rounded-full border border-stone-200 px-2.5 py-1 text-[10px] uppercase tracking-wide text-gray-600 dark:border-stone-700 dark:text-stone-500">
               {style} chart
             </span>
             <SeriesLegend seriesNames={seriesNames} />
           </div>
         </div>
+
+        {metrics && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MetricCard
+              label="Total"
+              value={formatNumber(metrics.total)}
+            />
+            <MetricCard
+              label="Daily average"
+              value={formatNumber(metrics.avg)}
+            />
+            <MetricCard
+              label={`Peak (${metrics.maxLabel})`}
+              value={formatNumber(metrics.max)}
+            />
+            <MetricCard
+              label={`Low (${metrics.minLabel})`}
+              value={formatNumber(metrics.min)}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="bg-slate-950/20 px-1 py-4 dark:bg-slate-950/40">
+      <div className="bg-gray-50 px-1 py-4 dark:bg-stone-900/30">
         <ResponsiveContainer width="100%" height={280}>
           {style === 'bar' ? (
             <BarChartView
@@ -370,7 +456,7 @@ export default function ChartDisplay({ input, state }) {
       </div>
 
       {input.xAxis?.title && (
-        <div className="border-t border-slate-100 px-4 py-2.5 text-center text-[11px] text-slate-500 dark:border-slate-800">
+        <div className="border-t border-gray-200 px-4 py-2.5 text-center text-[11px] text-gray-600 dark:border-stone-700 dark:text-stone-500">
           {input.xAxis.title}
         </div>
       )}

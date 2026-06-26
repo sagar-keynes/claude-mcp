@@ -10,9 +10,6 @@ const SUGGESTIONS = [
 export default function EmptyState({ onSelect, disabled = false }) {
   return (
     <div className="flex min-h-[55vh] flex-col items-center justify-center py-12 text-center">
-      <div className={`mb-6 flex h-14 w-14 items-center justify-center text-xl font-medium text-gray-700 dark:text-stone-200 ${surfaceClass}`}>
-        A
-      </div>
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-stone-100">
         How can I help with your marketing data?
       </h1>

@@ -53,11 +53,13 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-white dark:bg-stone-900 text-gray-900 dark:text-stone-100">
+    <div className="flex h-[100dvh] flex-col bg-stone-50 dark:bg-stone-900 text-gray-900 dark:text-stone-100">
       {/* Header */}
-      <header className="border-b border-gray-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-6 py-4">
+      <header className="border-b border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 px-6 py-4">
         <div className="mx-auto max-w-3xl flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Athena</h1>
+          <a href="/">
+            <h1 className="text-lg font-semibold">Keynes</h1>
+          </a>
           <button
             onClick={toggleTheme}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-stone-600 bg-gray-50 dark:bg-stone-700 text-gray-600 dark:text-stone-300 hover:bg-gray-100 dark:hover:bg-stone-600 transition-colors"
