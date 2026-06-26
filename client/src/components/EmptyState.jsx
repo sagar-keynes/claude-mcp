@@ -10,13 +10,13 @@ const SUGGESTIONS = [
 export default function EmptyState({ onSelect, disabled = false }) {
   return (
     <div className="flex min-h-[55vh] flex-col items-center justify-center py-12 text-center">
-      <div className={`mb-6 flex h-14 w-14 items-center justify-center text-xl font-medium text-slate-300 ${surfaceClass}`}>
+      <div className={`mb-6 flex h-14 w-14 items-center justify-center text-xl font-medium text-gray-700 dark:text-stone-200 ${surfaceClass}`}>
         A
       </div>
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
+      <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-stone-100">
         How can I help with your marketing data?
       </h1>
-      <p className="mt-3 max-w-xl text-[15px] leading-7 text-slate-400">
+      <p className="mt-3 max-w-xl text-[15px] leading-7 text-gray-600 dark:text-stone-400">
         Ask about traffic, revenue, ad spend, ROAS, or brand performance. I can
         pull live data, explain trends, and show charts.
       </p>
@@ -28,7 +28,7 @@ export default function EmptyState({ onSelect, disabled = false }) {
             type="button"
             disabled={disabled}
             onClick={() => onSelect(suggestion)}
-            className={`px-4 py-3 text-left text-sm leading-6 text-slate-300 transition hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-50 ${surfaceClass} hover:border-slate-700`}
+            className={`px-4 py-3 text-left text-sm leading-6 text-gray-700 dark:text-stone-300 transition hover:text-gray-900 dark:hover:text-stone-100 disabled:cursor-not-allowed disabled:opacity-50 ${surfaceClass} hover:border-gray-300 dark:hover:border-stone-600`}
           >
             {suggestion}
           </button>

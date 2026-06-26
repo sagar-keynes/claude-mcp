@@ -37,13 +37,13 @@ function ReasoningPart({ part }) {
 
   return (
     <details className={`group ${surfaceClass}`}>
-      <summary className="cursor-pointer list-none px-3 py-2 text-xs text-slate-400 marker:content-none [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none px-3 py-2 text-xs text-gray-500 dark:text-stone-400 marker:content-none [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
           <span className="transition group-open:rotate-90">›</span>
           View thinking
         </span>
       </summary>
-      <div className="border-t border-slate-100 px-3 py-3 text-xs leading-6 text-slate-400 dark:border-slate-800">
+      <div className="border-t border-gray-200 dark:border-stone-700 px-3 py-3 text-xs leading-6 text-gray-600 dark:text-stone-400">
         <MarkdownContent>{part.text}</MarkdownContent>
       </div>
     </details>
@@ -57,7 +57,7 @@ function SourcePart({ part }) {
         href={part.url}
         target="_blank"
         rel="noreferrer"
-        className={`inline-flex max-w-full items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-slate-100 ${surfaceClass}`}
+        className={`inline-flex max-w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-stone-300 hover:text-gray-900 dark:hover:text-stone-100 ${surfaceClass}`}
       >
         <span className="truncate">{part.title || part.url}</span>
       </a>

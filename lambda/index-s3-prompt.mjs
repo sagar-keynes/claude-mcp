@@ -8,8 +8,10 @@
 //  * API Gateway with /response-streaming-invocations integration.
 //  *
 //  * Required env vars:
-//  *   ANTHROPIC_API_KEY   — Anthropic API key
-//  *   HOSTED_MCP_URL      — SSE endpoint for your Keynes AI MCP server
+//  *   ANTHROPIC_API_KEY       — Anthropic API key
+//  *   HOSTED_MCP_URL          — SSE endpoint for Keynes AI MCP server
+//  *   SYSTEM_PROMPT_BUCKET    - S3 Bucket to fetch system prompt from
+//  *   SYSTEM_PROMPT_FILE_KEY  - File containing system prompt
 //  */
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
@@ -25,10 +27,10 @@ import { z } from 'zod'
 
 const HOSTED_MCP_URL = process.env.HOSTED_MCP_URL || ''
 const REGION = process.env.AWS_REGION || 'us-east-1'
-const ANTHROPIC_API_KEY_SECRET_NAME = process.env.ANTHROPIC_API_KEY_SECRET_NAME || 'Claude-api-key'
+const ANTHROPIC_API_KEY_SECRET_NAME = process.env.ANTHROPIC_API_KEY_SECRET_NAME || ''
 const MAX_TOOL_STEPS = Number(process.env.MAX_TOOL_STEPS || 20)
-const SYSTEM_PROMPT_BUCKET = process.env.SYSTEM_PROMPT_BUCKET || "kortex-creatives-config"
-const SYSTEM_PROMPT_FILE_KEY = process.env.SYSTEM_PROMPT_FILE_KEY || "claude-mcp-system-prompt.md"
+const SYSTEM_PROMPT_BUCKET = process.env.SYSTEM_PROMPT_BUCKET || ''
+const SYSTEM_PROMPT_FILE_KEY = process.env.SYSTEM_PROMPT_FILE_KEY || ''
 
 const secretsManagerClient = new SecretsManagerClient({ region: REGION })
 const s3Client = new S3Client({ region: REGION })
@@ -37,57 +39,26 @@ let secretsCache = {}
 /**
  * Fetches the system prompt file from S3.
  */
-async function getSpecCheckRequirementsFromS3(bucketName, key) {
+async function getSystemPromptFromS3() {
+  if (!SYSTEM_PROMPT_BUCKET || !SYSTEM_PROMPT_FILE_KEY) {
+    throw new Error('Environment variables not configured')
+  }
+
   try {
-    console.log(`Fetching system prompt.`)
-    const command = new GetObjectCommand({ Bucket: bucketName, Key: key })
+    console.log(`Fetching system prompt from S3`)
+
+    const command = new GetObjectCommand({ Bucket: SYSTEM_PROMPT_BUCKET, Key: SYSTEM_PROMPT_FILE_KEY })
     const response = await s3Client.send(command)
     
-    console.log(`System prompt fetch success.`)
     // Read the streaming body and decode as UTF-8
     const fileContent = await response.Body.transformToString('utf-8')
-    console.log(`System prompt returned.`)
+    console.log(`System prompt fetched successfully!`)
     return fileContent
   } catch (error) {
-    console.error(`Error fetching file from S3: ${error.message}`)
-    throw new Error(`Failed to fetch from S3: ${error.message}`)
+    console.error(`Error fetching system prompt from S3: ${error.message}`)
+    throw new Error(`Failed to fetch system prompt from S3: ${error.message}`)
   }
 }
-
-// ---------------------------------------------------------------------------
-// Tool definitions (unchanged from Express version)
-// ---------------------------------------------------------------------------
-
-const chartDisplayTool = tool({
-  description:
-    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data.',
-  inputSchema: z.object({
-    title: z.string().describe('Chart heading'),
-    style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
-    series: z
-      .array(
-        z.object({
-          name: z.string().describe('Series label shown in legend'),
-          values: z.array(z.number()).describe('Array of numeric data points'),
-        }),
-      )
-      .describe('One or more data series to plot'),
-    xAxis: z
-      .object({
-        data: z.array(z.string()).describe('Labels for each point on the x-axis'),
-        title: z.string().optional().describe('X-axis label'),
-      })
-      .optional(),
-    yAxis: z
-      .object({
-        title: z.string().optional().describe('Y-axis label'),
-        min: z.number().optional(),
-        max: z.number().optional(),
-      })
-      .optional(),
-  }),
-  execute: async (input) => input,
-})
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -144,7 +115,6 @@ function parseBody(event) {
 function baseHeaders(contentType = 'application/json') {
   return {
     'Content-Type': contentType,
-    // 'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   }
@@ -165,6 +135,7 @@ function uiMessageStreamHeaders() {
  * The ": padding\n\n" SSE comment is invisible to clients but satisfies
  * Lambda's ~8KB buffer threshold.
  */
+
 function ssePadding(size = 8192) {
   return `: ${'x'.repeat(size)}\n\n`
 }
@@ -191,6 +162,114 @@ async function pipeUIMessageStreamToLambda(sseStream, result) {
 }
 
 // ---------------------------------------------------------------------------
+// Chart formatting helpers
+// ---------------------------------------------------------------------------
+
+function detectChartableData(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return null
+
+  const headers = rows[0]
+  if (!Array.isArray(headers) || headers.length < 2) return null
+
+  // Check if first column looks like a date or category label
+  const firstColName = String(headers[0]).toLowerCase()
+  const isDateColumn = /date|time|month|year|period/.test(firstColName)
+
+  // Find numeric columns
+  const numericColumns = []
+  for (let i = 1; i < headers.length; i++) {
+    const colName = headers[i]
+    const isNumeric = rows.slice(1).every(row => {
+      const val = row[i]
+      return val == null || !isNaN(parseFloat(val))
+    })
+    if (isNumeric) {
+      numericColumns.push({ index: i, name: String(colName) })
+    }
+  }
+
+  if (!numericColumns.length) return null
+
+  // Build chart data
+  const xData = rows.slice(1).map(row => String(row[0]))
+  const series = numericColumns.map(({ index, name }) => ({
+    name,
+    values: rows.slice(1).map(row => parseFloat(row[index]) || 0),
+  }))
+
+  return {
+    xData,
+    series,
+    isTimeSeriesLike: isDateColumn,
+    firstColName: String(headers[0]),
+    style: isDateColumn ? 'line' : 'bar',
+  }
+}
+
+function generateChartFromQueryResult(queryResult, userQuery = '') {
+  const rows = queryResult?.rows
+  if (!rows) return null
+
+  const chartData = detectChartableData(rows)
+  if (!chartData) return null
+
+  // Infer title from context
+  let title = 'Data Visualization'
+  if (userQuery) {
+    const match = userQuery.match(/(?:daily|monthly|weekly)?\s*(\w+(?:\s+\w+)?)/i)
+    if (match) title = `${match[1].trim()} Over Time`
+  }
+
+  return {
+    title,
+    style: chartData.style,
+    series: chartData.series,
+    xAxis: {
+      data: chartData.xData,
+      title: chartData.firstColName,
+    },
+    yAxis: {
+      title: chartData.series.length === 1 ? chartData.series[0].name : undefined,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tool definitions
+// ---------------------------------------------------------------------------
+
+const chartDisplayTool = tool({
+  description:
+    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
+  inputSchema: z.object({
+    title: z.string().describe('Chart heading'),
+    style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
+    series: z
+      .array(
+        z.object({
+          name: z.string().describe('Series label shown in legend'),
+          values: z.array(z.number()).describe('Array of numeric data points'),
+        }),
+      )
+      .describe('One or more data series to plot'),
+    xAxis: z
+      .object({
+        data: z.array(z.string()).describe('Labels for each point on the x-axis'),
+        title: z.string().optional().describe('X-axis label'),
+      })
+      .optional(),
+    yAxis: z
+      .object({
+        title: z.string().optional().describe('Y-axis label'),
+        min: z.number().optional(),
+        max: z.number().optional(),
+      })
+      .optional(),
+  }),
+  execute: async (input) => input,
+})
+
+// ---------------------------------------------------------------------------
 // MCP client factory (created fresh per invocation — avoids stale SSE connections)
 // ---------------------------------------------------------------------------
 
@@ -207,10 +286,6 @@ async function createHostedMCPClient() {
     },
   })
 }
-
-// ---------------------------------------------------------------------------
-// Route: GET /health / OPTIONS — handled inline in handler export below
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Route: POST /api/query/stream  (STREAMING)
@@ -249,16 +324,14 @@ async function handleStream(event, responseStream) {
   })
 
   let mcpClient = null
-  const { api_key } = await getSecretValue(ANTHROPIC_API_KEY_SECRET_NAME)
-  const anthropic = createAnthropic({ apiKey: api_key })
-
+  
   try {
     sseStream.write(ssePadding())
 
     mcpClient = await createHostedMCPClient()
     const mcpTools = await mcpClient.tools()
     const tools = { ...mcpTools, chartDisplayTool }
-
+    
     if (!Object.keys(tools).length) {
       sseStream.write(`data: ${JSON.stringify({ type: 'error', errorText: 'No tools available from MCP' })}\n\n`)
       sseStream.write('data: [DONE]\n\n')
@@ -266,7 +339,31 @@ async function handleStream(event, responseStream) {
       return
     }
 
-    const SYSTEM_PROMPT = await getSpecCheckRequirementsFromS3(SYSTEM_PROMPT_BUCKET, SYSTEM_PROMPT_FILE_KEY)
+    // Fetch API key from Secrets Manager
+    const apiKeySecret = await getSecretValue(ANTHROPIC_API_KEY_SECRET_NAME)
+    const apiKey = typeof apiKeySecret === 'object' ? apiKeySecret.api_key : apiKeySecret
+    const anthropic = createAnthropic({ apiKey: apiKey })
+
+    // Fetch system prompt from S3
+    const baseSystemPrompt = await getSystemPromptFromS3()
+
+    // Enhance system prompt with chart generation guidance
+    const SYSTEM_PROMPT = `${baseSystemPrompt}
+
+## Visualization Guidelines
+
+When you receive tabular query results containing:
+- Date/time columns with numerical metrics (daily spend, revenue, impressions, etc.)
+- Multiple time periods with comparable values
+
+Use the \`chartDisplayTool\` to create a visual representation. Choose:
+- **line chart** for trends over time (especially continuous metrics like spend, revenue)
+- **bar chart** for comparing discrete periods or categories
+- **scatter chart** for relationship analysis
+
+After generating the chart, provide your analysis of the data patterns, trends, and insights.
+
+**Example**: If a query returns daily ad spend for May with 31 rows, immediately create a line chart showing the spend trend, then analyze patterns (peaks, drops, anomalies).`
 
     const result = streamText({
       model: anthropic('claude-opus-4-8'),
@@ -353,7 +450,7 @@ export const handler = awslambda.streamifyResponse(
         statusCode: 200,
         headers: baseHeaders(),
       })
-      s.write(JSON.stringify({ status: 'ok', hostedMcpConfigured: !!HOSTED_MCP_URL }))
+      s.write(JSON.stringify({ status: 'ok', hostedMcpConfigured: !!HOSTED_MCP_URL, s3BucketConfigured: !!SYSTEM_PROMPT_FILE_KEY }))
       s.end()
       return
     }

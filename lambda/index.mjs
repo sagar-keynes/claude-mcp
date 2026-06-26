@@ -11,7 +11,7 @@
 //  *   ANTHROPIC_API_KEY_SECRET_NAME   — Secrets Manager secret name for API key
 //  *   GOOGLE_DOCS_SECRET_NAME         — Secrets Manager secret name for Google service account
 //  *   GOOGLE_DOC_ID                   — Google Doc ID to fetch system prompt from
-//  *   HOSTED_MCP_URL                  — SSE endpoint for your Keynes AI MCP server
+//  *   HOSTED_MCP_URL                  — SSE endpoint for Keynes AI MCP server
 //  */
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
@@ -199,12 +199,85 @@ async function pipeUIMessageStreamToLambda(sseStream, result) {
 }
 
 // ---------------------------------------------------------------------------
+// Chart formatting helpers
+// ---------------------------------------------------------------------------
+
+function detectChartableData(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return null
+
+  const headers = rows[0]
+  if (!Array.isArray(headers) || headers.length < 2) return null
+
+  // Check if first column looks like a date or category label
+  const firstColName = String(headers[0]).toLowerCase()
+  const isDateColumn = /date|time|month|year|period/.test(firstColName)
+
+  // Find numeric columns
+  const numericColumns = []
+  for (let i = 1; i < headers.length; i++) {
+    const colName = headers[i]
+    const isNumeric = rows.slice(1).every(row => {
+      const val = row[i]
+      return val == null || !isNaN(parseFloat(val))
+    })
+    if (isNumeric) {
+      numericColumns.push({ index: i, name: String(colName) })
+    }
+  }
+
+  if (!numericColumns.length) return null
+
+  // Build chart data
+  const xData = rows.slice(1).map(row => String(row[0]))
+  const series = numericColumns.map(({ index, name }) => ({
+    name,
+    values: rows.slice(1).map(row => parseFloat(row[index]) || 0),
+  }))
+
+  return {
+    xData,
+    series,
+    isTimeSeriesLike: isDateColumn,
+    firstColName: String(headers[0]),
+    style: isDateColumn ? 'line' : 'bar',
+  }
+}
+
+function generateChartFromQueryResult(queryResult, userQuery = '') {
+  const rows = queryResult?.rows
+  if (!rows) return null
+
+  const chartData = detectChartableData(rows)
+  if (!chartData) return null
+
+  // Infer title from context
+  let title = 'Data Visualization'
+  if (userQuery) {
+    const match = userQuery.match(/(?:daily|monthly|weekly)?\s*(\w+(?:\s+\w+)?)/i)
+    if (match) title = `${match[1].trim()} Over Time`
+  }
+
+  return {
+    title,
+    style: chartData.style,
+    series: chartData.series,
+    xAxis: {
+      data: chartData.xData,
+      title: chartData.firstColName,
+    },
+    yAxis: {
+      title: chartData.series.length === 1 ? chartData.series[0].name : undefined,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
 
 const chartDisplayTool = tool({
   description:
-    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data.',
+    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
   inputSchema: z.object({
     title: z.string().describe('Chart heading'),
     style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
@@ -305,9 +378,27 @@ async function handleStream(event, responseStream) {
       return
     }
 
+    // Enhance system prompt with chart generation guidance
+    const enhancedSystemPrompt = `${systemPrompt}
+
+## Visualization Guidelines
+
+When you receive tabular query results containing:
+- Date/time columns with numerical metrics (daily spend, revenue, impressions, etc.)
+- Multiple time periods with comparable values
+
+Use the \`chartDisplayTool\` to create a visual representation. Choose:
+- **line chart** for trends over time (especially continuous metrics like spend, revenue)
+- **bar chart** for comparing discrete periods or categories
+- **scatter chart** for relationship analysis
+
+After generating the chart, provide your analysis of the data patterns, trends, and insights.
+
+**Example**: If a query returns daily ad spend for May with 31 rows, immediately create a line chart showing the spend trend, then analyze patterns (peaks, drops, anomalies).`
+
     const result = streamText({
       model: anthropic('claude-opus-4-8'),
-      system: systemPrompt,
+      system: enhancedSystemPrompt,
       messages: promptMessages,
       tools,
       stopWhen: stepCountIs(MAX_TOOL_STEPS),

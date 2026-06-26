@@ -32,7 +32,7 @@ const TOOL_META = {
 }
 
 function ToolIcon({ type }) {
-  const className = 'h-4 w-4 text-slate-400'
+  const className = 'h-4 w-4 text-gray-600 dark:text-stone-400'
 
   switch (type) {
     case 'metrics':
@@ -74,7 +74,7 @@ function ToolIcon({ type }) {
 function StatusIndicator({ isRunning, isError, isComplete }) {
   if (isRunning) {
     return (
-      <span className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-slate-700 border-t-slate-300" />
+      <span className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-gray-400 dark:border-stone-700 border-t-gray-600 dark:border-t-stone-300" />
     )
   }
 
@@ -134,15 +134,15 @@ export default function DataToolBadge({ part }) {
         isError
           ? 'border-red-500/20 bg-red-500/[0.06]'
           : isRunning
-            ? 'border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40'
-            : 'border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/30'
+            ? 'border-gray-200 bg-gray-50 dark:border-stone-800 dark:bg-stone-900/40'
+            : 'border-gray-200 bg-gray-50/80 dark:border-stone-800 dark:bg-stone-900/30'
       }`}
     >
       <div
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
           isError
             ? 'border-red-500/20 bg-red-500/10'
-            : 'border-slate-100 bg-slate-100 dark:border-slate-800 dark:bg-slate-900/60'
+            : 'border-gray-200 bg-gray-100 dark:border-stone-800 dark:bg-stone-900/60'
         }`}
       >
         <ToolIcon type={meta?.icon ?? 'datasets'} />
@@ -151,14 +151,14 @@ export default function DataToolBadge({ part }) {
       <div className="min-w-0 flex-1">
         <p
           className={`truncate text-sm font-medium ${
-            isError ? 'text-red-200' : 'text-slate-200'
+            isError ? 'text-red-700 dark:text-red-200' : 'text-gray-900 dark:text-stone-100'
           }`}
         >
           {title}
         </p>
         <p
           className={`truncate text-xs ${
-            isError ? 'text-red-300/70' : 'text-slate-500'
+            isError ? 'text-red-600 dark:text-red-300/70' : 'text-gray-600 dark:text-stone-500'
           }`}
         >
           {subtitle}
