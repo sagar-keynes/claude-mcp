@@ -389,7 +389,8 @@ export default function ChartDisplay({ input, state }) {
   const yAxisTitle = input.yAxis?.title
   const xAxisData = input.xAxis?.data
   const summary = getSeriesSummary(input.series)
-  const metrics = calculateMetrics(input.series, xAxisData)
+  // Use Claude's metrics if provided, otherwise auto-calculate
+  const metrics = input.metrics || calculateMetrics(input.series, xAxisData)
 
   return (
     <div className={`my-3 overflow-hidden ${surfaceClass}`}>
@@ -409,7 +410,19 @@ export default function ChartDisplay({ input, state }) {
           </div>
         </div>
 
-        {metrics && (
+        {metrics && Array.isArray(metrics) && metrics.length > 0 && (
+          <div className={`grid gap-3 ${metrics.length === 1 ? 'grid-cols-1' : metrics.length === 2 ? 'grid-cols-2' : metrics.length === 3 ? 'grid-cols-3 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+            {metrics.map((metric, idx) => (
+              <MetricCard
+                key={idx}
+                label={metric.label}
+                value={metric.value}
+                context={metric.context}
+              />
+            ))}
+          </div>
+        )}
+        {metrics && !Array.isArray(metrics) && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MetricCard
               label="Total"

@@ -240,7 +240,7 @@ function generateChartFromQueryResult(queryResult, userQuery = '') {
 
 const chartDisplayTool = tool({
   description:
-    'Render a line, bar, or scatter chart inline in the chat. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
+    'Render a line, bar, or scatter chart inline in the chat with optional metric cards. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
   inputSchema: z.object({
     title: z.string().describe('Chart heading'),
     style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
@@ -265,6 +265,16 @@ const chartDisplayTool = tool({
         max: z.number().optional(),
       })
       .optional(),
+    metrics: z
+      .array(
+        z.object({
+          label: z.string().describe('Metric label (e.g., "Total Spend", "Peak Date")'),
+          value: z.string().describe('Formatted metric value to display'),
+          context: z.string().optional().describe('Optional context or detail (e.g., date for peak/low)'),
+        }),
+      )
+      .optional()
+      .describe('Pre-calculated metrics to display above the chart. If omitted, no metric cards shown.'),
   }),
   execute: async (input) => input,
 })
@@ -352,18 +362,34 @@ async function handleStream(event, responseStream) {
 
 ## Visualization Guidelines
 
-When you receive tabular query results containing:
-- Date/time columns with numerical metrics (daily spend, revenue, impressions, etc.)
-- Multiple time periods with comparable values
-
-Use the \`chartDisplayTool\` to create a visual representation. Choose:
-- **line chart** for trends over time (especially continuous metrics like spend, revenue)
+When you receive tabular query results, use the \`chartDisplayTool\` to create visualizations. Choose:
+- **line chart** for trends over time (spend, revenue, impressions, etc.)
 - **bar chart** for comparing discrete periods or categories
 - **scatter chart** for relationship analysis
 
-After generating the chart, provide your analysis of the data patterns, trends, and insights.
+## Metric Cards
 
-**Example**: If a query returns daily ad spend for May with 31 rows, immediately create a line chart showing the spend trend, then analyze patterns (peaks, drops, anomalies).`
+Always include relevant metrics in the \`metrics\` field of chartDisplayTool. Calculate and send metrics that are most meaningful for the data:
+
+Examples:
+- For spend data: Total Spend, Daily Average, Peak Date, Low Date
+- For conversions: Total Conversions, Conversion Rate (%), Peak Day, Lowest Day
+- For traffic: Total Visits, Avg Daily Visits, Peak Traffic Day, Traffic Trend
+- For custom data: Any other metrics that provide key insights
+
+Format metric values as readable strings (e.g., "$164,755", "2,345 visits", "12.5%"). Include context like dates when relevant.
+
+If data demands no metrics (e.g., pure visualization), omit the metrics field entirely.
+
+**Example**:
+\`\`\`
+metrics: [
+  { label: "Total Spend", value: "$168,720.59" },
+  { label: "Daily Average", value: "$5,443.25" },
+  { label: "Peak (May 17)", value: "$6,512.67" },
+  { label: "Low (May 19)", value: "$2,205.20" }
+]
+\`\`\``
 
     const result = streamText({
       model: anthropic('claude-opus-4-8'),
