@@ -240,7 +240,7 @@ function generateChartFromQueryResult(queryResult, userQuery = '') {
 
 const chartDisplayTool = tool({
   description:
-    'Render a line, bar, or scatter chart inline in the chat with optional metric cards. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
+  'Render a line, bar, or scatter chart inline in the chat with optional metric cards. Use when the user asks for a chart, graph, or visualization of data, or when you receive tabular time-series data from a query.',
   inputSchema: z.object({
     title: z.string().describe('Chart heading'),
     style: z.enum(['line', 'bar', 'scatter']).describe('Chart type'),
@@ -392,7 +392,7 @@ metrics: [
 \`\`\``
 
     const result = streamText({
-      model: anthropic('claude-opus-4-8'),
+      model: anthropic('claude-sonnet-4-6'),
       system: SYSTEM_PROMPT,
       messages: promptMessages,
       tools,
